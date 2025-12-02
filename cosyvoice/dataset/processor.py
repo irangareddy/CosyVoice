@@ -13,11 +13,13 @@
 # limitations under the License.
 import logging
 import random
+import numpy as np
 
 import pyarrow.parquet as pq
 from io import BytesIO
 import torch
 import torchaudio
+import soundfile as sf
 from torch.nn.utils.rnn import pad_sequence
 import torch.nn.functional as F
 import pyworld as pw
@@ -83,7 +85,15 @@ def filter(data,
             Iterable[{key, wav, label, sample_rate}]
     """
     for sample in data:
-        sample['speech'], sample['sample_rate'] = torchaudio.load(BytesIO(sample['audio_data']))
+        # Use soundfile directly to avoid torchcodec dependency
+        audio_data, sample_rate = sf.read(BytesIO(sample['audio_data']))
+        # Convert to tensor and handle shape: soundfile returns (num_samples, channels) or (num_samples,)
+        audio_tensor = torch.from_numpy(audio_data).float()
+        if audio_tensor.dim() == 1:
+            sample['speech'] = audio_tensor.unsqueeze(0)
+        else:
+            sample['speech'] = audio_tensor.permute(1, 0)  # (channels, num_samples)
+        sample['sample_rate'] = sample_rate
         sample['speech'] = sample['speech'].mean(dim=0, keepdim=True)
         del sample['audio_data']
         # sample['wav'] is torch.Tensor, we have 100 frames every second
