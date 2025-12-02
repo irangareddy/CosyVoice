@@ -21,10 +21,13 @@ import onnxruntime
 import numpy as np
 import torchaudio
 import whisper
+import soundfile as sf
 
 
 def single_job(utt):
-    audio, sample_rate = torchaudio.load(utt2wav[utt], backend='soundfile')
+    # Use soundfile to avoid torchcodec issues with PyTorch 2.10
+    audio, sample_rate = sf.read(utt2wav[utt])
+    audio = torch.from_numpy(audio).float().unsqueeze(0)  # Convert to tensor and add channel dimension
     if sample_rate != 16000:
         audio = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)(audio)
     # Convert audio to mono

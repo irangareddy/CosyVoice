@@ -229,6 +229,205 @@ python3 webui.py --port 50000 --model_dir pretrained_models/CosyVoice-300M
 
 For advanced users, we have provided training and inference scripts in `examples/libritts/cosyvoice/run.sh`.
 
+---
+
+## 🎭 Emotional Speech Fine-Tuning
+
+This repository includes a complete setup for fine-tuning CosyVoice2 on emotional speech datasets. **Preprocessed data will be provided** - just clone, setup, and train!
+
+### Quick Start
+
+```bash
+# 1. Clone repo
+git clone --recursive https://github.com/YOUR_USERNAME/CosyVoice.git
+cd CosyVoice
+git submodule update --init --recursive
+
+# 2. Install dependencies
+conda create -n cosyvoice -y python=3.10
+conda activate cosyvoice
+pip install -r requirements.txt
+pip install soundfile  # Required for PyTorch 2.10+ compatibility
+
+# 3. Download pretrained model
+python -c "from modelscope import snapshot_download; snapshot_download('iic/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')"
+
+# 4. Extract preprocessed data (will be provided as .tar.gz)
+# Download from: [LINK_TO_PREPROCESSED_DATA]
+tar -xzf cosyvoice_emotional_data.tar.gz -C data/
+
+# 5. Start training!
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=100 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29400' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model llm \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/llm.pt \
+  --model_dir exp/emotional_sft/llm \
+  --tensorboard_dir tensorboard/emotional_sft/llm
+```
+
+### What's Included
+
+**✅ Pre-configured Files:**
+- `conf/cosyvoice2_emotional_sft.yaml` - Optimized config for emotional fine-tuning
+- `scripts/prepare_emotional_data.py` - Dataset preparation script
+- `tools/extract_embedding.py` - Modified for PyTorch 2.10+ (uses soundfile)
+- `tools/extract_speech_token.py` - Modified for PyTorch 2.10+ (uses soundfile)
+
+**✅ Preprocessed Dataset Included:**
+- **18,940 emotional speech samples** from ESD + RAVDESS
+- **Train**: 15,080 samples (16 parquet files, 1.3GB)
+- **Validation**: 1,822 samples (2 parquet files, 171MB)
+- **Test**: 2,038 samples (3 parquet files, 173MB)
+- All embeddings and tokens pre-extracted
+- Ready-to-train parquet format
+
+**✅ Training Options:**
+
+| Option | Components | Duration | Best For |
+|--------|-----------|----------|----------|
+| **LLM Only** (Recommended) | Fine-tune LLM only | 6-8 hours | Learning emotions quickly |
+| **LLM + Flow** | Sequential training | 1-2 days | Better quality |
+| **Full Pipeline** | LLM + Flow + HiFiGAN | 2-3 days | Maximum quality |
+
+### Training Commands
+
+**Option 1: LLM-Only Fine-Tuning** (Recommended - 6-8 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=100 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29400' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model llm \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/llm.pt \
+  --model_dir exp/emotional_sft/llm \
+  --tensorboard_dir tensorboard/emotional_sft/llm
+```
+
+**Option 2: Flow Training** (After LLM - 12-16 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=101 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29401' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model flow \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/flow.pt \
+  --model_dir exp/emotional_sft/flow \
+  --tensorboard_dir tensorboard/emotional_sft/flow
+```
+
+**Option 3: HiFiGAN Training** (After Flow - 8-12 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=102 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29402' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model hifigan \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/hift.pt \
+  --model_dir exp/emotional_sft/hifigan \
+  --tensorboard_dir tensorboard/emotional_sft/hifigan
+```
+
+### Monitor Training
+
+```bash
+# View TensorBoard logs
+tensorboard --logdir tensorboard/emotional_sft/llm --port 6006
+
+# Check GPU usage
+nvidia-smi -l 1
+
+# View training logs
+tail -f exp/emotional_sft/llm/train.log
+```
+
+### Inference with Fine-Tuned Model
+
+```python
+import sys
+sys.path.append('third_party/Matcha-TTS')
+from cosyvoice.cli.cosyvoice import CosyVoice2
+from cosyvoice.utils.file_utils import load_wav
+import torchaudio
+
+# Load your fine-tuned model
+# Replace llm.pt with your trained checkpoint
+model_dir = 'pretrained_models/CosyVoice2-0.5B'
+# Copy trained LLM to model directory
+# cp exp/emotional_sft/llm/llm.pt pretrained_models/CosyVoice2-0.5B/llm.pt
+
+cosyvoice = CosyVoice2(model_dir, load_jit=False, load_trt=False, load_vllm=False, fp16=False)
+
+# Zero-shot with emotion
+prompt_speech = load_wav('your_reference_audio.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_zero_shot(
+    'This is a happy sentence!',
+    'Reference transcript',
+    prompt_speech,
+    stream=False
+)):
+    torchaudio.save(f'emotional_output_{i}.wav', j['tts_speech'], cosyvoice.sample_rate)
+```
+
+### Hardware Requirements
+
+- **GPU**: NVIDIA GPU with 16GB+ VRAM (tested on RTX 5090 32GB)
+- **RAM**: 32GB+ system RAM
+- **Storage**: 50GB+ free space
+- **CUDA**: 11.8 or higher
+
+### Troubleshooting
+
+**PyTorch 2.10+ Compatibility:**
+If you encounter `RuntimeError: Could not load libtorchcodec`, the extraction scripts have been updated to use `soundfile` instead of `torchaudio.load()`.
+
+**Out of Memory:**
+Reduce `max_frames_in_batch` in `conf/cosyvoice2_emotional_sft.yaml`:
+```yaml
+batch:
+  batch_type: 'dynamic'
+  max_frames_in_batch: 2000  # Reduce from 3000 if OOM
+```
+
+**Slow Training:**
+Enable mixed precision or reduce batch size:
+```yaml
+train_conf:
+  accum_grad: 1  # Reduce from 2
+```
+
+### Citation
+
+If you use this emotional fine-tuning setup, please cite both CosyVoice and the emotional speech datasets:
+
+```bibtex
+@article{du2024cosyvoice2,
+  title={Cosyvoice 2: Scalable streaming speech synthesis with large language models},
+  author={Du, Zhihao and Wang, Yuxuan and Chen, Qian and others},
+  journal={arXiv preprint arXiv:2412.10117},
+  year={2024}
+}
+```
+
+---
+
 #### Build for deployment
 
 Optionally, if you want service deployment,
