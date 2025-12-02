@@ -207,20 +207,20 @@ data_pipeline_gan: [
     !ref <padding>,
 ]
 
-# Flow Training Configuration (FIXED: Gradient explosion issue)
+# Flow Training Configuration (MINIMAL TEST - Data validation run)
 train_conf:
     optim: adam
     optim_conf:
-        lr: 2e-5  # REDUCED from 1e-4 (was causing gradient explosion)
-        weight_decay: 0.01  # Regularization to prevent overfitting
+        lr: 5e-6  # Ultra conservative LR
+        weight_decay: 0.05  # Heavy regularization
         betas: [0.9, 0.999]
         eps: 1e-8
-    scheduler: constantlr  # CHANGED from warmuplr (no warmup, stable LR)
+    scheduler: constantlr
     scheduler_conf:
-        warmup_steps: 0  # No warmup needed with lower LR
-    max_epoch: 15  # Increased since lower LR needs more epochs
-    grad_clip: 0.5  # REDUCED from 1.0 (stricter gradient clipping)
-    accum_grad: 4  # INCREASED from 2 (larger effective batch = more stable)
+        warmup_steps: 0
+    max_epoch: 3  # MINIMAL: Just 3 epochs to test data quality
+    grad_clip: 0.3  # Strict clipping
+    accum_grad: 8  # Large batch for stability
     log_interval: 50
     save_per_step: -1  # Save every epoch
     # W&B tracking
