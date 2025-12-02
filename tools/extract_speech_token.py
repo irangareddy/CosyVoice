@@ -30,6 +30,13 @@ def single_job(utt):
     # Convert audio to mono
     if audio.shape[0] > 1:
         audio = audio.mean(dim=0, keepdim=True)
+
+    # Skip audio that is too short (< 0.1 seconds)
+    min_length = 1600  # 0.1 seconds at 16kHz
+    if audio.shape[1] < min_length:
+        logging.warning(f'Skipping {utt} - audio too short ({audio.shape[1]} samples, need >= {min_length})')
+        return None, None
+
     if audio.shape[1] / 16000 > 30:
         logging.warning('do not support extract speech token for audio longer than 30s')
         speech_token = []
@@ -43,10 +50,22 @@ def single_job(utt):
 def main(args):
     all_task = [executor.submit(single_job, utt) for utt in utt2wav.keys()]
     utt2speech_token = {}
+    skipped_count = 0
     for future in tqdm(as_completed(all_task)):
         utt, speech_token = future.result()
+        # Skip if audio was too short (returned None)
+        if utt is None or speech_token is None:
+            skipped_count += 1
+            continue
         utt2speech_token[utt] = speech_token
     torch.save(utt2speech_token, '{}/utt2speech_token.pt'.format(args.dir))
+
+    # Print summary
+    total_utts = len(utt2wav)
+    processed_utts = len(utt2speech_token)
+    print(f"\nSummary: Processed {processed_utts}/{total_utts} utterances")
+    if skipped_count > 0:
+        print(f"Skipped {skipped_count} utterances (audio too short or too long)")
 
 
 if __name__ == "__main__":

@@ -25,6 +25,14 @@ def single_job(utt):
     audio, sample_rate = torchaudio.load(utt2wav[utt])
     if sample_rate != 16000:
         audio = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=16000)(audio)
+
+    # Skip audio that is too short (< 0.1 seconds at 16kHz = 1600 samples)
+    # Window size is 400 samples, need at least 2x that
+    min_length = 800
+    if audio.shape[1] < min_length:
+        print(f"Warning: Skipping {utt} - audio too short ({audio.shape[1]} samples, need >= {min_length})")
+        return None, None
+
     feat = kaldi.fbank(audio,
                        num_mel_bins=80,
                        dither=0,
@@ -37,8 +45,13 @@ def single_job(utt):
 def main(args):
     all_task = [executor.submit(single_job, utt) for utt in utt2wav.keys()]
     utt2embedding, spk2embedding = {}, {}
+    skipped_count = 0
     for future in tqdm(as_completed(all_task)):
         utt, embedding = future.result()
+        # Skip if audio was too short (returned None)
+        if utt is None or embedding is None:
+            skipped_count += 1
+            continue
         utt2embedding[utt] = embedding
         spk = utt2spk[utt]
         if spk not in spk2embedding:
@@ -48,6 +61,13 @@ def main(args):
         spk2embedding[k] = torch.tensor(v).mean(dim=0).tolist()
     torch.save(utt2embedding, "{}/utt2embedding.pt".format(args.dir))
     torch.save(spk2embedding, "{}/spk2embedding.pt".format(args.dir))
+
+    # Print summary
+    total_utts = len(utt2wav)
+    processed_utts = len(utt2embedding)
+    print(f"\nSummary: Processed {processed_utts}/{total_utts} utterances")
+    if skipped_count > 0:
+        print(f"Skipped {skipped_count} utterances (audio too short < 0.05s)")
 
 
 if __name__ == "__main__":
