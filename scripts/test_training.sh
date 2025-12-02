@@ -62,6 +62,7 @@ test_model() {
       --checkpoint pretrained_models/CosyVoice2-0.5B/${model}.pt \
       --model_dir exp/test_run/${model} \
       --tensorboard_dir tensorboard/test_run/${model} \
+      --qwen_pretrain_path pretrained_models/CosyVoice2-0.5B/CosyVoice-BlankEN \
       --num_workers 2 \
       --prefetch 50
 

@@ -6,8 +6,13 @@ from typing import Tuple
 def tpr_loss(disc_real_outputs, disc_generated_outputs, tau):
     loss = 0
     for dr, dg in zip(disc_real_outputs, disc_generated_outputs):
-        m_DG = torch.median((dr - dg))
-        L_rel = torch.mean((((dr - dg) - m_DG) ** 2)[dr < dg + m_DG])
+        # Handle dimension mismatch by truncating to minimum size
+        min_size = min(dr.shape[-1], dg.shape[-1])
+        dr_aligned = dr[..., :min_size]
+        dg_aligned = dg[..., :min_size]
+
+        m_DG = torch.median((dr_aligned - dg_aligned))
+        L_rel = torch.mean((((dr_aligned - dg_aligned) - m_DG) ** 2)[dr_aligned < dg_aligned + m_DG])
         loss += tau - F.relu(tau - L_rel)
     return loss
 

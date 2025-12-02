@@ -39,6 +39,7 @@ torchrun --nnodes=1 --nproc_per_node=1 \
   --checkpoint pretrained_models/CosyVoice2-0.5B/${MODEL_TYPE}.pt \
   --model_dir exp/emotional_sft/${MODEL_TYPE} \
   --tensorboard_dir tensorboard/emotional_sft/${MODEL_TYPE} \
+  --qwen_pretrain_path pretrained_models/CosyVoice2-0.5B/CosyVoice-BlankEN \
   --num_workers 2 \
   --prefetch 50
 
