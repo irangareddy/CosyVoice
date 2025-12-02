@@ -50,3 +50,23 @@ pretrained_models/*
 *_pb2_grpc.py
 *_pb2.py
 *.tar
+
+# Generated/temporary files
+generated_audio/
+download_model.py
+generate_sample.py
+quick_inference.py
+test_trained_model.py
+extract_audio.ps1
+setup_conda_path.ps1
+
+# User-specific config
+conf/cosyvoice2_test*.yaml
+conf/cosyvoice2_custom*.yaml
+local/
+
+# Test data
+scripts/data/
+
+# Claude Code
+.claude/

@@ -1,0 +1,65 @@
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+SHELL ["/bin/bash", "--login", "-c"]
+
+# Install system dependencies
+RUN apt-get update -y && \
+    apt-get install -y git build-essential curl wget ffmpeg unzip git-lfs sox libsox-dev dos2unix && \
+    apt-get clean && \
+    git lfs install
+
+# Install miniforge
+RUN wget --quiet https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -O ~/miniforge.sh && \
+    /bin/bash ~/miniforge.sh -b -p /opt/conda && \
+    rm ~/miniforge.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+
+ENV PATH /opt/conda/bin:$PATH
+
+# Configure conda/mamba with retry settings and mirrors
+RUN conda config --set remote_connect_timeout_secs 30.0 && \
+    conda config --set remote_read_timeout_secs 120.0 && \
+    conda config --set remote_max_retries 10 && \
+    conda config --add channels conda-forge && \
+    conda config --set channel_priority flexible
+
+# Create conda environment with Python 3.10 using mamba (faster and more reliable)
+RUN mamba create -y -n cosyvoice python=3.10 || \
+    (echo "Mamba failed, trying conda..." && \
+     for i in {1..10}; do \
+        conda create -y -n cosyvoice python=3.10 && break || \
+        (echo "Conda attempt $i/10 failed, waiting 15 seconds..." && sleep 15); \
+     done) && \
+    conda env list && \
+    test -d /opt/conda/envs/cosyvoice || (echo "ERROR: conda environment not created!" && exit 1)
+
+ENV PATH /opt/conda/envs/cosyvoice/bin:$PATH
+
+WORKDIR /workspace/CosyVoice
+ENV PYTHONPATH="/workspace/CosyVoice:/workspace/CosyVoice/third_party/Matcha-TTS"
+
+# Install pynini in the conda environment with retry
+RUN mamba run -n cosyvoice mamba install -y -c conda-forge pynini==2.1.5 || \
+    (echo "Mamba pynini install failed, trying conda..." && \
+     for i in {1..10}; do \
+        conda run -n cosyvoice conda install -y -c conda-forge pynini==2.1.5 && break || \
+        (echo "Pynini install attempt $i/10 failed, waiting 15 seconds..." && sleep 15); \
+     done) && \
+    conda run -n cosyvoice python -c "import pynini; print('Pynini installed successfully')" || \
+    (echo "ERROR: Pynini not installed!" && exit 1)
+
+# Set default conda environment
+RUN echo "conda activate cosyvoice" >> ~/.bashrc
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt /workspace/CosyVoice/requirements.txt
+RUN conda run -n cosyvoice pip install --no-cache-dir -r /workspace/CosyVoice/requirements.txt || \
+    (echo "ERROR: Failed to install requirements!" && exit 1)
+
+# Verify critical packages
+RUN conda run -n cosyvoice python -c "import torch; import torchaudio; import onnxruntime; print('All dependencies installed successfully')"
+
+CMD ["/bin/bash"]

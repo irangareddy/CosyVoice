@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  cosyvoice-train:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.train
+    image: cosyvoice-train:latest
+    container_name: cosyvoice-finetune
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=0
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/workspace/CosyVoice:/workspace/CosyVoice/third_party/Matcha-TTS
+    volumes:
+      # Mount entire CosyVoice directory
+      - C:/Users/akshith/Desktop/voxe-cosy-finetune/CosyVoice:/workspace/CosyVoice
+      # Mount pretrained models (read-only)
+      - C:/Users/akshith/Desktop/voxe-cosy-finetune/CosyVoice/pretrained_models:/workspace/pretrained_models:ro
+      # Mount data directory (read-only)
+      - C:/Users/akshith/Desktop/voxe-cosy-finetune/CosyVoice/data:/workspace/data:ro
+      # Mount experiment output directory (read-write)
+      - C:/Users/akshith/Desktop/voxe-cosy-finetune/CosyVoice/exp:/workspace/CosyVoice/exp
+      # Mount tensorboard logs
+      - C:/Users/akshith/Desktop/voxe-cosy-finetune/CosyVoice/tensorboard:/workspace/CosyVoice/tensorboard
+    shm_size: '16gb'
+    working_dir: /workspace/CosyVoice
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
