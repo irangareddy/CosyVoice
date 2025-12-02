@@ -6,18 +6,21 @@ set -e
 
 MODEL_TYPE=${1:-llm}
 WANDB_API_KEY="fa1dd39746b8c27d133e3ac6d49ce74207706ff5"
-WANDB_PROJECT="rr-sjsu/cosy-voxe"
+WANDB_ENTITY="rr-sjsu"
+WANDB_PROJECT="cosy-voxe"
 WANDB_RUN_NAME="emotional-sft-${MODEL_TYPE}-$(date +%Y%m%d-%H%M%S)"
 
 echo "=========================================="
 echo "Training CosyVoice2 ${MODEL_TYPE} with W&B"
 echo "=========================================="
+echo "W&B Entity: ${WANDB_ENTITY}"
 echo "W&B Project: ${WANDB_PROJECT}"
 echo "W&B Run: ${WANDB_RUN_NAME}"
 echo ""
 
 # Set W&B environment variables
 export WANDB_API_KEY="${WANDB_API_KEY}"
+export WANDB_ENTITY="${WANDB_ENTITY}"
 export WANDB_PROJECT="${WANDB_PROJECT}"
 export WANDB_RUN_NAME="${WANDB_RUN_NAME}"
 export WANDB_MODE="online"  # Use "offline" if no internet
@@ -47,5 +50,5 @@ echo ""
 echo "=========================================="
 echo "Training completed!"
 echo "View logs: tensorboard --logdir tensorboard/emotional_sft/${MODEL_TYPE}"
-echo "W&B dashboard: https://wandb.ai/${WANDB_PROJECT}"
+echo "W&B dashboard: https://wandb.ai/${WANDB_ENTITY}/${WANDB_PROJECT}"
 echo "=========================================="
