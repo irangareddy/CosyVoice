@@ -222,8 +222,13 @@ def cosyvoice_join(group_join, info_dict):
     if info_dict["batch_idx"] != 0:
         # we try to join all rank in both ddp and deepspeed mode, in case different rank has different lr
         try:
-            dist.monitored_barrier(group=group_join,
-                                   timeout=group_join.options._timeout)
+            # PyTorch 2.10+ compatibility: use default timeout if options not available
+            timeout = getattr(group_join, 'options', None)
+            if timeout is not None and hasattr(timeout, '_timeout'):
+                timeout = timeout._timeout
+            else:
+                timeout = None  # Use default timeout
+            dist.monitored_barrier(group=group_join, timeout=timeout)
             return False
         except RuntimeError as e:
             logging.info("Detected uneven workload distribution: {}\n".format(e) +
