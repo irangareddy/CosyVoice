@@ -1,99 +1,124 @@
 #!/bin/bash
-# Test training with small subset (5 epochs, ~2-3 minutes)
-# Verifies training setup works before running full 5-6 hour training
+# Quick test training script - 1 epoch with limited data
+# Verifies all three models (LLM, Flow, HiFiGAN) work before full training
+# Usage: bash scripts/test_training.sh [llm|flow|hifigan|all]
 
 set -e
 
-echo "========================================="
-echo "TEST: Training Pipeline (5 epochs)"
-echo "========================================="
-echo "This will train for 5 epochs (~2-3 min) to verify setup"
+MODEL_TYPE=${1:-llm}
+
+echo "=========================================="
+echo "TEST RUN: Training ${MODEL_TYPE} for 1 epoch"
+echo "=========================================="
+echo "This will train for 1 epoch (~5-10 min) to verify setup"
 echo ""
 
 # Configuration
-export PYTHONPATH=third_party/Matcha-TTS:$PWD
-export CUDA_VISIBLE_DEVICES="0"
-num_gpus=1
-job_id=9999
-dist_backend="nccl"
-num_workers=2
-prefetch=50
-train_engine=torch_ddp
+export PYTHONPATH=$PWD:$PWD/third_party/Matcha-TTS
+export WANDB_MODE="offline"  # Offline mode for test run
+export WANDB_DIR="./wandb_logs"
 
-# Paths
-pretrained_model_dir=/workspace/pretrained_models/CosyVoice2-0.5B
-config=conf/cosyvoice2_test.yaml
-train_data=data/test_emotional_train.data.list
-cv_data=data/test_emotional_val.data.list
-model_dir=exp/test_cosyvoice2_emotional_sft/llm
-tensorboard_dir=tensorboard/test_cosyvoice2_emotional_sft/llm
+# Create small test dataset (first parquet file only)
+echo "Step 1: Creating small test dataset..."
+mkdir -p data/test_run
+head -n 1 data/full/parquet/train/data.list > data/test_run/train_mini.list
+head -n 1 data/full/parquet/val/data.list > data/test_run/val_mini.list
 
-# Create output directories
-mkdir -p $model_dir
-mkdir -p $tensorboard_dir
-
-echo "Checking prerequisites..."
-if [ ! -f "$train_data" ]; then
-    echo "ERROR: Test data not found at $train_data"
-    echo "Please run: bash scripts/test_preprocessing.sh first"
-    exit 1
-fi
-
-if [ ! -f "$pretrained_model_dir/llm.pt" ]; then
-    echo "ERROR: Pretrained LLM model not found"
-    exit 1
-fi
-
-echo "✓ Test data found: $(wc -l < $train_data) parquet files"
-echo "✓ Pretrained model found"
+echo "✓ Test datasets created:"
+echo "  Train: 1 parquet file (~1000 samples)"
+echo "  Val: 1 parquet file (~100 samples)"
 echo ""
 
-echo "Starting TEST training (5 epochs, ~2-3 minutes)..."
-echo ""
-
-# Train LLM only for 5 epochs
-torchrun --nnodes=1 --nproc_per_node=$num_gpus \
-    --rdzv_id=$job_id --rdzv_backend="c10d" --rdzv_endpoint="localhost:1234" \
-  cosyvoice/bin/train.py \
-  --train_engine $train_engine \
-  --config $config \
-  --train_data $train_data \
-  --cv_data $cv_data \
-  --qwen_pretrain_path $pretrained_model_dir/CosyVoice-BlankEN \
-  --model llm \
-  --checkpoint $pretrained_model_dir/llm.pt \
-  --model_dir $model_dir \
-  --tensorboard_dir $tensorboard_dir \
-  --ddp.dist_backend $dist_backend \
-  --num_workers $num_workers \
-  --prefetch $prefetch \
-  --pin_memory \
-  --use_amp 2>&1 | tee $model_dir/train.log
-
-echo ""
-echo "========================================="
-echo "TEST TRAINING COMPLETED!"
-echo "========================================="
-
-# Check if training succeeded
-if [ -f "$model_dir/epoch_5.pt" ]; then
-    echo "✓ Training completed successfully!"
-    echo "✓ Checkpoint saved: epoch_5.pt"
-    echo ""
-    echo "Checkpoints created:"
-    ls -lh $model_dir/epoch_*.pt
-    echo ""
-    echo "Training log:"
-    echo "  $model_dir/train.log"
-    echo ""
-    echo "Check loss values:"
-    grep "Epoch" $model_dir/train.log | tail -10
-    echo ""
-    echo "========================================="
-    echo "All systems verified! You can now run:"
-    echo "  bash scripts/train_emotional_sft.sh"
-    echo "========================================="
+# Create test config if it doesn't exist
+if [ ! -f "conf/cosyvoice2_test.yaml" ]; then
+    echo "Step 2: Creating test config..."
+    cp conf/cosyvoice2_emotional_sft.yaml conf/cosyvoice2_test.yaml
+    # Modify max_epoch to 1 for quick test
+    sed -i 's/max_epoch: 50/max_epoch: 1/g' conf/cosyvoice2_test.yaml
+    sed -i 's/max_epoch: 200/max_epoch: 1/g' conf/cosyvoice2_test.yaml
+    # Disable W&B for test
+    sed -i 's/wandb_project:.*/wandb_project: ""/' conf/cosyvoice2_test.yaml
+    echo "✓ Test config created (1 epoch only)"
 else
-    echo "⚠ Training may have issues. Check logs:"
-    tail -50 $model_dir/train.log
+    echo "Step 2: Using existing test config"
 fi
+echo ""
+
+# Function to test a single model
+test_model() {
+    local model=$1
+    echo "=========================================="
+    echo "Testing ${model} model..."
+    echo "=========================================="
+
+    torchrun --nnodes=1 --nproc_per_node=1 \
+      --rdzv_id=999 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29401' \
+      cosyvoice/bin/train.py \
+      --train_engine torch_ddp \
+      --config conf/cosyvoice2_test.yaml \
+      --train_data data/test_run/train_mini.list \
+      --cv_data data/test_run/val_mini.list \
+      --model ${model} \
+      --checkpoint pretrained_models/CosyVoice2-0.5B/${model}.pt \
+      --model_dir exp/test_run/${model} \
+      --tensorboard_dir tensorboard/test_run/${model} \
+      --num_workers 2 \
+      --prefetch 50
+
+    # Check if epoch completed
+    if [ -f "exp/test_run/${model}/epoch_0_whole.pt" ] || [ -f "exp/test_run/${model}/epoch_1_whole.pt" ]; then
+        echo ""
+        echo "✅ ${model} test PASSED"
+        echo "   Checkpoint: exp/test_run/${model}/"
+        return 0
+    else
+        echo ""
+        echo "❌ ${model} test FAILED - no checkpoint created"
+        return 1
+    fi
+}
+
+# Run tests
+if [ "$MODEL_TYPE" == "all" ]; then
+    echo "Testing ALL models sequentially..."
+    echo ""
+    test_model "llm" && LLM_OK=1 || LLM_OK=0
+    echo ""
+    test_model "flow" && FLOW_OK=1 || FLOW_OK=0
+    echo ""
+    test_model "hifigan" && HIFIGAN_OK=1 || HIFIGAN_OK=0
+
+    echo ""
+    echo "=========================================="
+    echo "TEST RESULTS SUMMARY"
+    echo "=========================================="
+    [ $LLM_OK -eq 1 ] && echo "✅ LLM: PASSED" || echo "❌ LLM: FAILED"
+    [ $FLOW_OK -eq 1 ] && echo "✅ Flow: PASSED" || echo "❌ Flow: FAILED"
+    [ $HIFIGAN_OK -eq 1 ] && echo "✅ HiFiGAN: PASSED" || echo "❌ HiFiGAN: FAILED"
+    echo ""
+
+    if [ $LLM_OK -eq 1 ] && [ $FLOW_OK -eq 1 ] && [ $HIFIGAN_OK -eq 1 ]; then
+        echo "🎉 ALL TESTS PASSED! Ready for full training."
+        echo ""
+        echo "Start full training with:"
+        echo "  bash scripts/train_with_wandb.sh llm      # Train LLM"
+        echo "  bash scripts/train_with_wandb.sh flow     # Train Flow"
+        echo "  bash scripts/train_with_wandb.sh hifigan  # Train HiFiGAN"
+    else
+        echo "⚠️  Some tests failed. Check logs in exp/test_run/*/"
+    fi
+else
+    test_model "$MODEL_TYPE"
+    echo ""
+    echo "=========================================="
+    echo "Single model test complete!"
+    echo "=========================================="
+    echo ""
+    echo "To test all models:"
+    echo "  bash scripts/test_training.sh all"
+    echo ""
+    echo "To start full training:"
+    echo "  bash scripts/train_with_wandb.sh ${MODEL_TYPE}"
+fi
+
+echo "=========================================="

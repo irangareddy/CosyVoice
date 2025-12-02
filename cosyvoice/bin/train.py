@@ -33,7 +33,7 @@ from cosyvoice.utils.train_utils import (
     init_distributed,
     init_dataset_and_dataloader,
     init_optimizer_and_scheduler,
-    init_summarywriter, save_model,
+    init_summarywriter, init_wandb, save_model,
     wrap_cuda_model, check_modify_and_save_config)
 
 
@@ -126,6 +126,9 @@ def main():
 
     # Tensorboard summary
     writer = init_summarywriter(args)
+
+    # W&B tracking
+    wandb_run = init_wandb(args, configs)
 
     # load checkpoint
     if args.dpo is True:

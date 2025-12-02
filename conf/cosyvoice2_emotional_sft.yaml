@@ -215,11 +215,16 @@ train_conf:
     scheduler: constantlr  # Constant LR for SFT (no warmup needed)
     scheduler_conf:
         warmup_steps: 500  # Reduced warmup for smaller dataset
-    max_epoch: 30  # Sufficient for 15k samples (ESD + RAVDESS)
+    max_epoch: 50  # Increased from 30 - will early stop if overfitting
     grad_clip: 5
     accum_grad: 2  # Effective batch size = 2 * batch_size
     log_interval: 50  # More frequent logging for monitoring
-    save_per_step: -1  # Save per epoch
+    save_per_step: -1  # Save per epoch (saves every epoch with CV loss)
+    # W&B tracking
+    wandb_project: "rr-sjsu/cosy-voxe"  # Your W&B project
+    wandb_entity: "rr-sjsu"  # Your W&B team/entity
+    wandb_api_key: "fa1dd39746b8c27d133e3ac6d49ce74207706ff5"  # Your W&B API key
+    wandb_run_name: "emotional-sft-llm"  # Will be auto-generated if not specified
 
 # gan train conf (not used for LLM-only training)
 train_conf_gan:

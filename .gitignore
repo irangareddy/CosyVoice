@@ -50,8 +50,10 @@ pretrained_models/*
 *_pb2_grpc.py
 *_pb2.py
 *.tar
+*.tar.gz
 
 # Generated/temporary files
+wandb_logs/
 generated_audio/
 download_model.py
 generate_sample.py

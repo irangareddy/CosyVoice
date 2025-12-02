@@ -1,436 +1,510 @@
-# Documentation Index
+[![SVG Banners](https://svg-banners.vercel.app/api?type=origin&text1=CosyVoice🤠&text2=Text-to-Speech%20💖%20Large%20Language%20Model&width=800&height=210)](https://github.com/Akshay090/svg-banners)
 
-Welcome to the CosyVoice Emotional Fine-Tuning documentation!
+## 👉🏻 CosyVoice 👈🏻
 
-**Last Updated**: 2025-12-01
+**CosyVoice 3.0**: [Demos](https://funaudiollm.github.io/cosyvoice3/); [Paper](https://arxiv.org/abs/2505.17589); [CV3-Eval](https://github.com/FunAudioLLM/CV3-Eval)
 
----
+**CosyVoice 2.0**: [Demos](https://funaudiollm.github.io/cosyvoice2/); [Paper](https://arxiv.org/abs/2412.10117); [Modelscope](https://www.modelscope.cn/studios/iic/CosyVoice2-0.5B); [HuggingFace](https://huggingface.co/spaces/FunAudioLLM/CosyVoice2-0.5B)
 
-## Quick Navigation
+**CosyVoice 1.0**: [Demos](https://fun-audio-llm.github.io); [Paper](https://funaudiollm.github.io/pdf/CosyVoice_v1.pdf); [Modelscope](https://www.modelscope.cn/studios/iic/CosyVoice-300M)
 
-### 🚀 Getting Started
-- [Quick Reference Guide](QUICK_REFERENCE.md) - Fast command lookups
-- [System Configuration](SYSTEM_CONFIGURATION.md) - Hardware & software setup
-- [Dataset Documentation](DATASET_DOCUMENTATION.md) - Dataset details
+## Highlight🔥
 
-### 📚 Training Guides
-- [Training Guide](TRAINING_GUIDE.md) - Detailed training instructions
-- [Parallel Training Guide](PARALLEL_TRAINING_GUIDE.md) - Multi-GPU comprehensive guide
-- [Inference Guide](INFERENCE_GUIDE.md) - Running inference and generation
+**CosyVoice 2.0** has been released! Compared to version 1.0, the new version offers more accurate, more stable, faster, and better speech generation capabilities.
+### Multilingual
+- **Supported Language**: Chinese, English, Japanese, Korean, Chinese dialects (Cantonese, Sichuanese, Shanghainese, Tianjinese, Wuhanese, etc.)
+- **Crosslingual & Mixlingual**：Support zero-shot voice cloning for cross-lingual and code-switching scenarios.
+### Ultra-Low Latency
+- **Bidirectional Streaming Support**: CosyVoice 2.0 integrates offline and streaming modeling technologies.
+- **Rapid First Packet Synthesis**: Achieves latency as low as 150ms while maintaining high-quality audio output.
+### High Accuracy
+- **Improved Pronunciation**: Reduces pronunciation errors by 30% to 50% compared to CosyVoice 1.0.
+- **Benchmark Achievements**: Attains the lowest character error rate on the hard test set of the Seed-TTS evaluation set.
+### Strong Stability
+- **Consistency in Timbre**: Ensures reliable voice consistency for zero-shot and cross-language speech synthesis.
+- **Cross-language Synthesis**: Marked improvements compared to version 1.0.
+### Natural Experience
+- **Enhanced Prosody and Sound Quality**: Improved alignment of synthesized audio, raising MOS evaluation scores from 5.4 to 5.53.
+- **Emotional and Dialectal Flexibility**: Now supports more granular emotional controls and accent adjustments.
 
-### 🔧 Technical Guides
-- [Project Overview](../CLAUDE.md) - Project instructions and guidelines
-- [Build RTX 5090 Docker](BUILD_RTX5090_DOCKER.md) - RTX 5090 specific setup
-- [PyTorch 2.10 Compatibility](PYTORCH_2.10_COMPATIBILITY_FIXES.md) - Compatibility fixes
-- [RTX 5090 PyTorch Upgrade](RTX_5090_PYTORCH_UPGRADE.md) - PyTorch upgrade guide
-- [Common Issues](COMMON_ISSUES.md) - Troubleshooting common problems
+## Roadmap
 
----
+- [x] 2025/08
 
-## Documentation Structure
+    - [x] Thanks to the contribution from NVIDIA Yuekai Zhang, add triton trtllm runtime support and cosyvoice2 grpo training support
 
+- [x] 2025/07
+
+    - [x] release cosyvoice 3.0 eval set
+
+- [x] 2025/05
+
+    - [x] add cosyvoice 2.0 vllm support
+
+- [x] 2024/12
+
+    - [x] 25hz cosyvoice 2.0 released
+
+- [x] 2024/09
+
+    - [x] 25hz cosyvoice base model
+    - [x] 25hz cosyvoice voice conversion model
+
+- [x] 2024/08
+
+    - [x] Repetition Aware Sampling(RAS) inference for llm stability
+    - [x] Streaming inference mode support, including kv cache and sdpa for rtf optimization
+
+- [x] 2024/07
+
+    - [x] Flow matching training support
+    - [x] WeTextProcessing support when ttsfrd is not available
+    - [x] Fastapi server and client
+
+
+## Install
+
+### Clone and install
+
+- Clone the repo
+    ``` sh
+    git clone --recursive https://github.com/FunAudioLLM/CosyVoice.git
+    # If you failed to clone the submodule due to network failures, please run the following command until success
+    cd CosyVoice
+    git submodule update --init --recursive
+    ```
+
+- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
+- Create Conda env:
+
+    ``` sh
+    conda create -n cosyvoice -y python=3.10
+    conda activate cosyvoice
+    pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com
+
+    # If you encounter sox compatibility issues
+    # ubuntu
+    sudo apt-get install sox libsox-dev
+    # centos
+    sudo yum install sox sox-devel
+    ```
+
+### Model download
+
+We strongly recommend that you download our pretrained `CosyVoice2-0.5B` `CosyVoice-300M` `CosyVoice-300M-SFT` `CosyVoice-300M-Instruct` model and `CosyVoice-ttsfrd` resource.
+
+``` python
+# SDK模型下载
+from modelscope import snapshot_download
+snapshot_download('iic/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')
+snapshot_download('iic/CosyVoice-300M', local_dir='pretrained_models/CosyVoice-300M')
+snapshot_download('iic/CosyVoice-300M-SFT', local_dir='pretrained_models/CosyVoice-300M-SFT')
+snapshot_download('iic/CosyVoice-300M-Instruct', local_dir='pretrained_models/CosyVoice-300M-Instruct')
+snapshot_download('iic/CosyVoice-ttsfrd', local_dir='pretrained_models/CosyVoice-ttsfrd')
 ```
-docs/
-├── README.md                          # This file - documentation index
-│
-├── Quick Reference
-│   ├── QUICK_REFERENCE.md             # Command quick reference
-│   └── COMMON_ISSUES.md               # Troubleshooting guide
-│
-├── System & Configuration
-│   ├── SYSTEM_CONFIGURATION.md        # Complete system specs
-│   ├── BUILD_RTX5090_DOCKER.md        # RTX 5090 Docker setup
-│   ├── RTX_5090_PYTORCH_UPGRADE.md    # PyTorch upgrade guide
-│   └── PYTORCH_2.10_COMPATIBILITY...  # Compatibility fixes
-│
-├── Training Guides
-│   ├── TRAINING_GUIDE.md              # Main training guide
-│   ├── PARALLEL_TRAINING_GUIDE.md     # Multi-GPU training
-│   └── INFERENCE_GUIDE.md             # Inference guide
-│
-├── Dataset & Models
-│   ├── DATASET_DOCUMENTATION.md       # Dataset details
-│   └── MODEL_COMPARISON_GUIDE.md      # Model comparison
-│
-Root:
-└── CLAUDE.md                          # Project overview (root)
+
+``` sh
+# git模型下载，请确保已安装git lfs
+mkdir -p pretrained_models
+git clone https://www.modelscope.cn/iic/CosyVoice2-0.5B.git pretrained_models/CosyVoice2-0.5B
+git clone https://www.modelscope.cn/iic/CosyVoice-300M.git pretrained_models/CosyVoice-300M
+git clone https://www.modelscope.cn/iic/CosyVoice-300M-SFT.git pretrained_models/CosyVoice-300M-SFT
+git clone https://www.modelscope.cn/iic/CosyVoice-300M-Instruct.git pretrained_models/CosyVoice-300M-Instruct
+git clone https://www.modelscope.cn/iic/CosyVoice-ttsfrd.git pretrained_models/CosyVoice-ttsfrd
 ```
 
----
+Optionally, you can unzip `ttsfrd` resource and install `ttsfrd` package for better text normalization performance.
 
-## Documentation by Topic
+Notice that this step is not necessary. If you do not install `ttsfrd` package, we will use wetext by default.
 
-### System Configuration
+``` sh
+cd pretrained_models/CosyVoice-ttsfrd/
+unzip resource.zip -d .
+pip install ttsfrd_dependency-0.1-py3-none-any.whl
+pip install ttsfrd-0.4.2-cp310-cp310-linux_x86_64.whl
+```
 
-**File**: [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md)
+### Basic Usage
 
-**Contents**:
-- Hardware configuration (RTX 5090 specs)
-- Software stack (Docker, Python, dependencies)
-- Docker configuration and volume mounts
-- Model architecture specifications
-- Training configuration and hyperparameters
-- Directory structure
-- Performance benchmarks
+We strongly recommend using `CosyVoice2-0.5B` for better performance.
+Follow the code below for detailed usage of each model.
 
-**Use when**:
-- Setting up a new machine
-- Troubleshooting environment issues
-- Understanding system requirements
-- Reproducing the setup
+``` python
+import sys
+sys.path.append('third_party/Matcha-TTS')
+from cosyvoice.cli.cosyvoice import CosyVoice, CosyVoice2
+from cosyvoice.utils.file_utils import load_wav
+import torchaudio
+```
 
-### Dataset Information
+#### CosyVoice2 Usage
+```python
+cosyvoice = CosyVoice2('pretrained_models/CosyVoice2-0.5B', load_jit=False, load_trt=False, load_vllm=False, fp16=False)
 
-**File**: [DATASET_DOCUMENTATION.md](DATASET_DOCUMENTATION.md)
+# NOTE if you want to reproduce the results on https://funaudiollm.github.io/cosyvoice2, please add text_frontend=False during inference
+# zero_shot usage
+prompt_speech_16k = load_wav('./asset/zero_shot_prompt.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+    torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
 
-**Contents**:
-- Dataset overview (ESD, RAVDESS, CREMA-D)
-- Dataset statistics and distribution
-- Data formats (JSONL, Kaldi, Parquet)
-- Emotion categories and characteristics
-- Preprocessing pipeline details
-- Quality control guidelines
-- Citation information
+# save zero_shot spk for future usage
+assert cosyvoice.add_zero_shot_spk('希望你以后能够做的比我还好呦。', prompt_speech_16k, 'my_zero_shot_spk') is True
+for i, j in enumerate(cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '', '', zero_shot_spk_id='my_zero_shot_spk', stream=False)):
+    torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+cosyvoice.save_spkinfo()
 
-**Use when**:
-- Understanding the dataset structure
-- Preparing new data
-- Analyzing emotion distribution
-- Troubleshooting data issues
-- Writing papers (citations)
+# fine grained control, for supported control, check cosyvoice/tokenizer/tokenizer.py#L248
+for i, j in enumerate(cosyvoice.inference_cross_lingual('在他讲述那个荒诞故事的过程中，他突然[laughter]停下来，因为他自己也被逗笑了[laughter]。', prompt_speech_16k, stream=False)):
+    torchaudio.save('fine_grained_control_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
 
-### Quick Reference
+# instruct usage
+for i, j in enumerate(cosyvoice.inference_instruct2('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '用四川话说这句话', prompt_speech_16k, stream=False)):
+    torchaudio.save('instruct_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
 
-**File**: [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+# bistream usage, you can use generator as input, this is useful when using text llm model as input
+# NOTE you should still have some basic sentence split logic because llm can not handle arbitrary sentence length
+def text_generator():
+    yield '收到好友从远方寄来的生日礼物，'
+    yield '那份意外的惊喜与深深的祝福'
+    yield '让我心中充满了甜蜜的快乐，'
+    yield '笑容如花儿般绽放。'
+for i, j in enumerate(cosyvoice.inference_zero_shot(text_generator(), '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+    torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+```
 
-**Contents**:
-- Common Docker commands
-- Training commands
-- Monitoring commands
-- Configuration quick edits
-- Troubleshooting one-liners
-- Useful shortcuts and aliases
+#### CosyVoice2 vllm Usage
+If you want to use vllm for inference, please install `vllm==v0.9.0`. Older vllm version do not support CosyVoice2 inference.
 
-**Use when**:
-- Need quick command lookup
-- During active training (keep open!)
-- Troubleshooting common issues
-- Setting up monitoring
+Notice that `vllm==v0.9.0` has a lot of specific requirements, for example `torch==2.7.0`. You can create a new env to in case your hardward do not support vllm and old env is corrupted.
 
-### Project Instructions
+``` sh
+conda create -n cosyvoice_vllm --clone cosyvoice
+conda activate cosyvoice_vllm
+pip install vllm==v0.9.0 transformers==4.51.3 -i https://mirrors.aliyun.com/pypi/simple/ --trusted-host=mirrors.aliyun.com
+python vllm_example.py
+```
 
-**File**: [../CLAUDE.md](../CLAUDE.md)
+#### CosyVoice Usage
+```python
+cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M-SFT', load_jit=False, load_trt=False, fp16=False)
+# sft usage
+print(cosyvoice.list_available_spks())
+# change stream=True for chunk stream inference
+for i, j in enumerate(cosyvoice.inference_sft('你好，我是通义生成式语音大模型，请问有什么可以帮您的吗？', '中文女', stream=False)):
+    torchaudio.save('sft_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
 
-**Contents**:
-- Project overview
-- Architecture details
-- Environment setup
-- Running inference
-- Training pipeline
-- Testing and linting
-- Deployment options
+cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M')
+# zero_shot usage, <|zh|><|en|><|jp|><|yue|><|ko|> for Chinese/English/Japanese/Cantonese/Korean
+prompt_speech_16k = load_wav('./asset/zero_shot_prompt.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_zero_shot('收到好友从远方寄来的生日礼物，那份意外的惊喜与深深的祝福让我心中充满了甜蜜的快乐，笑容如花儿般绽放。', '希望你以后能够做的比我还好呦。', prompt_speech_16k, stream=False)):
+    torchaudio.save('zero_shot_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+# cross_lingual usage
+prompt_speech_16k = load_wav('./asset/cross_lingual_prompt.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_cross_lingual('<|en|>And then later on, fully acquiring that company. So keeping management in line, interest in line with the asset that\'s coming into the family is a reason why sometimes we don\'t buy the whole thing.', prompt_speech_16k, stream=False)):
+    torchaudio.save('cross_lingual_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+# vc usage
+prompt_speech_16k = load_wav('./asset/zero_shot_prompt.wav', 16000)
+source_speech_16k = load_wav('./asset/cross_lingual_prompt.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_vc(source_speech_16k, prompt_speech_16k, stream=False)):
+    torchaudio.save('vc_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
 
-**Use when**:
-- First time setup
-- Understanding CosyVoice architecture
-- Learning best practices
-- Deploying models
+cosyvoice = CosyVoice('pretrained_models/CosyVoice-300M-Instruct')
+# instruct usage, support <laughter></laughter><strong></strong>[laughter][breath]
+for i, j in enumerate(cosyvoice.inference_instruct('在面对挑战时，他展现了非凡的<strong>勇气</strong>与<strong>智慧</strong>。', '中文男', 'Theo \'Crimson\', is a fiery, passionate rebel leader. Fights with fervor for justice, but struggles with impulsiveness.', stream=False)):
+    torchaudio.save('instruct_{}.wav'.format(i), j['tts_speech'], cosyvoice.sample_rate)
+```
 
-### Training Guide
+#### Start web demo
 
-**File**: [TRAINING_GUIDE.md](TRAINING_GUIDE.md)
+You can use our web demo page to get familiar with CosyVoice quickly.
 
-**Contents**:
-- Detailed step-by-step training
-- Data preparation walkthrough
-- Training execution
-- Model evaluation
-- Common issues and solutions
+Please see the demo website for details.
 
-**Use when**:
-- Running training for the first time
-- Step-by-step guidance needed
-- Troubleshooting training failures
+``` python
+# change iic/CosyVoice-300M-SFT for sft inference, or iic/CosyVoice-300M-Instruct for instruct inference
+python3 webui.py --port 50000 --model_dir pretrained_models/CosyVoice-300M
+```
 
-### Parallel Training Guide
+#### Advanced Usage
 
-**File**: [PARALLEL_TRAINING_GUIDE.md](PARALLEL_TRAINING_GUIDE.md)
-
-**Contents**:
-- Multi-machine setup
-- Data sharing strategies
-- Independent component training (LLM/Flow/HiFiGAN)
-- Model collection and combination
-- Monitoring multiple machines
-
-**Use when**:
-- Have multiple GPUs/machines
-- Want 3x speedup
-- Training all components (LLM + Flow + HiFiGAN)
-
-### Inference Guide
-
-**File**: [INFERENCE_GUIDE.md](INFERENCE_GUIDE.md)
-
-**Contents**:
-- Running inference with trained models
-- Zero-shot voice cloning
-- Emotion-controlled generation
-- Audio quality optimization
-
-**Use when**:
-- Generating audio with trained models
-- Testing model outputs
-- Production deployment
+For advanced users, we have provided training and inference scripts in `examples/libritts/cosyvoice/run.sh`.
 
 ---
 
-## Common Workflows
+## 🎭 Emotional Speech Fine-Tuning
 
-### First-Time Setup
+This repository includes a complete setup for fine-tuning CosyVoice2 on emotional speech datasets. **Preprocessed data will be provided** - just clone, setup, and train!
 
-1. Read [CLAUDE.md](../CLAUDE.md) - Understand the project
-2. Review [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md) - Check requirements
-3. Follow [TRAINING_GUIDE.md](TRAINING_GUIDE.md) - Get started
-4. Use [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - During training
+### Quick Start
 
-### Training on Single GPU
+```bash
+# 1. Clone repo
+git clone --recursive https://github.com/YOUR_USERNAME/CosyVoice.git
+cd CosyVoice
+git submodule update --init --recursive
 
-1. [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md) - Verify setup
-2. [DATASET_DOCUMENTATION.md](DATASET_DOCUMENTATION.md) - Understand data
-3. [TRAINING_GUIDE.md](TRAINING_GUIDE.md) - Follow step-by-step
-4. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Monitor training
+# 2. Install dependencies
+conda create -n cosyvoice -y python=3.10
+conda activate cosyvoice
+pip install -r requirements.txt
+pip install soundfile  # Required for PyTorch 2.10+ compatibility
 
-### Training on Multiple GPUs
+# 3. Download pretrained model
+python -c "from modelscope import snapshot_download; snapshot_download('iic/CosyVoice2-0.5B', local_dir='pretrained_models/CosyVoice2-0.5B')"
 
-1. [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md) - Setup each machine
-2. [PARALLEL_TRAINING_GUIDE.md](PARALLEL_TRAINING_GUIDE.md) - Detailed guide
-3. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Monitor all machines
+# 4. Extract preprocessed data (will be provided as .tar.gz)
+# Download from: [LINK_TO_PREPROCESSED_DATA]
+tar -xzf cosyvoice_emotional_data.tar.gz -C data/
 
-### Running Inference
+# 5. Start training!
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=100 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29400' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model llm \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/llm.pt \
+  --model_dir exp/emotional_sft/llm \
+  --tensorboard_dir tensorboard/emotional_sft/llm
+```
 
-1. [INFERENCE_GUIDE.md](INFERENCE_GUIDE.md) - Inference walkthrough
-2. [MODEL_COMPARISON_GUIDE.md](MODEL_COMPARISON_GUIDE.md) - Compare models
-3. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Quick inference commands
+### What's Included
+
+**✅ Pre-configured Files:**
+- `conf/cosyvoice2_emotional_sft.yaml` - Optimized config for emotional fine-tuning
+- `scripts/prepare_emotional_data.py` - Dataset preparation script
+- `tools/extract_embedding.py` - Modified for PyTorch 2.10+ (uses soundfile)
+- `tools/extract_speech_token.py` - Modified for PyTorch 2.10+ (uses soundfile)
+
+**✅ Preprocessed Dataset Included:**
+- **18,940 emotional speech samples** from ESD + RAVDESS
+- **Train**: 15,080 samples (16 parquet files, 1.3GB)
+- **Validation**: 1,822 samples (2 parquet files, 171MB)
+- **Test**: 2,038 samples (3 parquet files, 173MB)
+- All embeddings and tokens pre-extracted
+- Ready-to-train parquet format
+
+**✅ Training Options:**
+
+| Option | Components | Duration | Best For |
+|--------|-----------|----------|----------|
+| **LLM Only** (Recommended) | Fine-tune LLM only | 6-8 hours | Learning emotions quickly |
+| **LLM + Flow** | Sequential training | 1-2 days | Better quality |
+| **Full Pipeline** | LLM + Flow + HiFiGAN | 2-3 days | Maximum quality |
+
+### Training Commands
+
+**Option 1: LLM-Only Fine-Tuning** (Recommended - 6-8 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=100 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29400' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model llm \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/llm.pt \
+  --model_dir exp/emotional_sft/llm \
+  --tensorboard_dir tensorboard/emotional_sft/llm
+```
+
+**Option 2: Flow Training** (After LLM - 12-16 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=101 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29401' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model flow \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/flow.pt \
+  --model_dir exp/emotional_sft/flow \
+  --tensorboard_dir tensorboard/emotional_sft/flow
+```
+
+**Option 3: HiFiGAN Training** (After Flow - 8-12 hours)
+```bash
+export PYTHONPATH=third_party/Matcha-TTS
+torchrun --nnodes=1 --nproc_per_node=1 \
+  --rdzv_id=102 --rdzv_backend='c10d' --rdzv_endpoint='localhost:29402' \
+  cosyvoice/bin/train.py \
+  --train_engine torch_ddp \
+  --config conf/cosyvoice2_emotional_sft.yaml \
+  --train_data data/full/parquet/train/data.list \
+  --cv_data data/full/parquet/val/data.list \
+  --model hifigan \
+  --checkpoint pretrained_models/CosyVoice2-0.5B/hift.pt \
+  --model_dir exp/emotional_sft/hifigan \
+  --tensorboard_dir tensorboard/emotional_sft/hifigan
+```
+
+### Monitor Training
+
+```bash
+# View TensorBoard logs
+tensorboard --logdir tensorboard/emotional_sft/llm --port 6006
+
+# Check GPU usage
+nvidia-smi -l 1
+
+# View training logs
+tail -f exp/emotional_sft/llm/train.log
+```
+
+### Inference with Fine-Tuned Model
+
+```python
+import sys
+sys.path.append('third_party/Matcha-TTS')
+from cosyvoice.cli.cosyvoice import CosyVoice2
+from cosyvoice.utils.file_utils import load_wav
+import torchaudio
+
+# Load your fine-tuned model
+# Replace llm.pt with your trained checkpoint
+model_dir = 'pretrained_models/CosyVoice2-0.5B'
+# Copy trained LLM to model directory
+# cp exp/emotional_sft/llm/llm.pt pretrained_models/CosyVoice2-0.5B/llm.pt
+
+cosyvoice = CosyVoice2(model_dir, load_jit=False, load_trt=False, load_vllm=False, fp16=False)
+
+# Zero-shot with emotion
+prompt_speech = load_wav('your_reference_audio.wav', 16000)
+for i, j in enumerate(cosyvoice.inference_zero_shot(
+    'This is a happy sentence!',
+    'Reference transcript',
+    prompt_speech,
+    stream=False
+)):
+    torchaudio.save(f'emotional_output_{i}.wav', j['tts_speech'], cosyvoice.sample_rate)
+```
+
+### Hardware Requirements
+
+- **GPU**: NVIDIA GPU with 16GB+ VRAM (tested on RTX 5090 32GB)
+- **RAM**: 32GB+ system RAM
+- **Storage**: 50GB+ free space
+- **CUDA**: 11.8 or higher
 
 ### Troubleshooting
 
-1. [COMMON_ISSUES.md](COMMON_ISSUES.md) - Check known issues
-2. [QUICK_REFERENCE.md](QUICK_REFERENCE.md) - Common commands
-3. [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md) - Verify environment
-4. [TRAINING_GUIDE.md](TRAINING_GUIDE.md) - Review training steps
+**PyTorch 2.10+ Compatibility:**
+If you encounter `RuntimeError: Could not load libtorchcodec`, the extraction scripts have been updated to use `soundfile` instead of `torchaudio.load()`.
 
----
-
-## Document Relationships
-
+**Out of Memory:**
+Reduce `max_frames_in_batch` in `conf/cosyvoice2_emotional_sft.yaml`:
+```yaml
+batch:
+  batch_type: 'dynamic'
+  max_frames_in_batch: 2000  # Reduce from 3000 if OOM
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLAUDE.md                            │
-│                  (Project Overview)                         │
-└─────────────────────────────────────────────────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌──────────┐   ┌──────────────┐   ┌──────────┐
-    │  QUICK   │   │   TRAINING   │   │ PARALLEL │
-    │  START   │   │    GUIDE     │   │ TRAINING │
-    └──────────┘   └──────────────┘   └──────────┘
-           │               │               │
-           └───────────────┼───────────────┘
-                           ▼
-              ┌────────────────────────┐
-              │  docs/ (Detailed Ref)  │
-              └────────────────────────┘
-                           │
-           ┌───────────────┼───────────────┐
-           ▼               ▼               ▼
-    ┌──────────┐   ┌──────────┐   ┌──────────┐
-    │  SYSTEM  │   │ DATASET  │   │  QUICK   │
-    │  CONFIG  │   │   DOCS   │   │   REF    │
-    └──────────┘   └──────────┘   └──────────┘
+
+**Slow Training:**
+Enable mixed precision or reduce batch size:
+```yaml
+train_conf:
+  accum_grad: 1  # Reduce from 2
+```
+
+### Citation
+
+If you use this emotional fine-tuning setup, please cite both CosyVoice and the emotional speech datasets:
+
+```bibtex
+@article{du2024cosyvoice2,
+  title={Cosyvoice 2: Scalable streaming speech synthesis with large language models},
+  author={Du, Zhihao and Wang, Yuxuan and Chen, Qian and others},
+  journal={arXiv preprint arXiv:2412.10117},
+  year={2024}
+}
 ```
 
 ---
 
-## Reading Order Recommendations
+#### Build for deployment
 
-### For Beginners
-1. CLAUDE.md (understand the project)
-2. QUICK_START.md (get running quickly)
-3. QUICK_REFERENCE.md (keep handy during training)
-4. TRAINING_GUIDE.md (if issues arise)
+Optionally, if you want service deployment,
+You can run the following steps.
 
-### For Experienced Users
-1. QUICK_PARALLEL_SETUP.md (if multi-GPU)
-2. QUICK_REFERENCE.md (command lookup)
-3. SYSTEM_CONFIGURATION.md (for reproducibility)
+``` sh
+cd runtime/python
+docker build -t cosyvoice:v1.0 .
+# change iic/CosyVoice-300M to iic/CosyVoice-300M-Instruct if you want to use instruct inference
+# for grpc usage
+docker run -d --runtime=nvidia -p 50000:50000 cosyvoice:v1.0 /bin/bash -c "cd /opt/CosyVoice/CosyVoice/runtime/python/grpc && python3 server.py --port 50000 --max_conc 4 --model_dir iic/CosyVoice-300M && sleep infinity"
+cd grpc && python3 client.py --port 50000 --mode <sft|zero_shot|cross_lingual|instruct>
+# for fastapi usage
+docker run -d --runtime=nvidia -p 50000:50000 cosyvoice:v1.0 /bin/bash -c "cd /opt/CosyVoice/CosyVoice/runtime/python/fastapi && python3 server.py --port 50000 --model_dir iic/CosyVoice-300M && sleep infinity"
+cd fastapi && python3 client.py --port 50000 --mode <sft|zero_shot|cross_lingual|instruct>
+```
 
-### For Researchers
-1. CLAUDE.md (architecture overview)
-2. SYSTEM_CONFIGURATION.md (complete specs)
-3. DATASET_DOCUMENTATION.md (data details + citations)
-4. TRAINING_GUIDE.md (methodology)
+#### Using Nvidia TensorRT-LLM for deployment
 
-### For Deployment
-1. CLAUDE.md (deployment options)
-2. SYSTEM_CONFIGURATION.md (requirements)
-3. TRAINING_GUIDE.md (model export)
+Using TensorRT-LLM to accelerate cosyvoice2 llm could give 4x acceleration comparing with huggingface transformers implementation.
+To quick start:
 
----
+``` sh
+cd runtime/triton_trtllm
+docker compose up -d
+```
+For more details, you could check [here](https://github.com/FunAudioLLM/CosyVoice/tree/main/runtime/triton_trtllm)
 
-## Search by Keyword
+## Discussion & Communication
 
-### Commands
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
+You can directly discuss on [Github Issues](https://github.com/FunAudioLLM/CosyVoice/issues).
 
-### Configuration
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md)
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#configuration-quick-edits)
+You can also scan the QR code to join our official Dingding chat group.
 
-### Dataset
-→ [DATASET_DOCUMENTATION.md](DATASET_DOCUMENTATION.md)
+<img src="./asset/dingding.png" width="250px">
 
-### Docker
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md#docker-configuration)
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#docker-commands)
+## Acknowledge
 
-### Emotions
-→ [DATASET_DOCUMENTATION.md](DATASET_DOCUMENTATION.md#emotion-categories)
+1. We borrowed a lot of code from [FunASR](https://github.com/modelscope/FunASR).
+2. We borrowed a lot of code from [FunCodec](https://github.com/modelscope/FunCodec).
+3. We borrowed a lot of code from [Matcha-TTS](https://github.com/shivammehta25/Matcha-TTS).
+4. We borrowed a lot of code from [AcademiCodec](https://github.com/yangdongchao/AcademiCodec).
+5. We borrowed a lot of code from [WeNet](https://github.com/wenet-e2e/wenet).
 
-### GPU / Hardware
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md#hardware-configuration)
+## Citations
 
-### Hyperparameters
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md#hyperparameters)
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#configuration-quick-edits)
+``` bibtex
+@article{du2024cosyvoice,
+  title={Cosyvoice: A scalable multilingual zero-shot text-to-speech synthesizer based on supervised semantic tokens},
+  author={Du, Zhihao and Chen, Qian and Zhang, Shiliang and Hu, Kai and Lu, Heng and Yang, Yexin and Hu, Hangrui and Zheng, Siqi and Gu, Yue and Ma, Ziyang and others},
+  journal={arXiv preprint arXiv:2407.05407},
+  year={2024}
+}
 
-### Inference
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#inference-testing)
-→ [CLAUDE.md](../CLAUDE.md#running-inference)
+@article{du2024cosyvoice,
+  title={Cosyvoice 2: Scalable streaming speech synthesis with large language models},
+  author={Du, Zhihao and Wang, Yuxuan and Chen, Qian and Shi, Xian and Lv, Xiang and Zhao, Tianyu and Gao, Zhifu and Yang, Yexin and Gao, Changfeng and Wang, Hui and others},
+  journal={arXiv preprint arXiv:2412.10117},
+  year={2024}
+}
 
-### Monitoring
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#monitoring)
+@article{du2025cosyvoice,
+  title={CosyVoice 3: Towards In-the-wild Speech Generation via Scaling-up and Post-training},
+  author={Du, Zhihao and Gao, Changfeng and Wang, Yuxuan and Yu, Fan and Zhao, Tianyu and Wang, Hao and Lv, Xiang and Wang, Hui and Shi, Xian and An, Keyu and others},
+  journal={arXiv preprint arXiv:2505.17589},
+  year={2025}
+}
 
-### Parallel Training
-→ [PARALLEL_TRAINING_GUIDE.md](PARALLEL_TRAINING_GUIDE.md)
+@inproceedings{lyu2025build,
+  title={Build LLM-Based Zero-Shot Streaming TTS System with Cosyvoice},
+  author={Lyu, Xiang and Wang, Yuxuan and Zhao, Tianyu and Wang, Hao and Liu, Huadai and Du, Zhihao},
+  booktitle={ICASSP 2025-2025 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)},
+  pages={1--2},
+  year={2025},
+  organization={IEEE}
+}
+```
 
-### Performance
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md#performance-benchmarks)
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#performance-benchmarks)
-
-### Preprocessing
-→ [DATASET_DOCUMENTATION.md](DATASET_DOCUMENTATION.md#preprocessing-pipeline)
-→ [TRAINING_GUIDE.md](TRAINING_GUIDE.md)
-
-### Training
-→ [TRAINING_GUIDE.md](TRAINING_GUIDE.md)
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#training-commands)
-
-### Troubleshooting
-→ [QUICK_REFERENCE.md](QUICK_REFERENCE.md#troubleshooting-commands)
-→ [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md#troubleshooting-references)
-
----
-
-## Additional Resources
-
-### External Links
-
-**CosyVoice Repository**:
-- GitHub: https://github.com/FunAudioLLM/CosyVoice
-- Issues: https://github.com/FunAudioLLM/CosyVoice/issues
-
-**Dataset Sources**:
-- ESD: [Emotional Speech Dataset](https://github.com/HLTSingapore/Emotional-Speech-Data)
-- RAVDESS: [Ryerson Audio-Visual Database](https://zenodo.org/record/1188976)
-- CREMA-D: [CREMA-D Dataset](https://github.com/CheyneyComputerScience/CREMA-D)
-
-**Technologies**:
-- PyTorch: https://pytorch.org/
-- Docker: https://www.docker.com/
-- TensorBoard: https://www.tensorflow.org/tensorboard
-
-### Support
-
-**Questions?**
-1. Check [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for common commands
-2. Review [SYSTEM_CONFIGURATION.md](SYSTEM_CONFIGURATION.md) for setup details
-3. Search existing issues on GitHub
-4. Open a new issue with details
-
----
-
-## Contributing to Documentation
-
-### Documentation Standards
-
-**File Naming**:
-- Use UPPERCASE for top-level docs (CLAUDE.md, TRAINING_GUIDE.md)
-- Use UPPERCASE for docs/ files (SYSTEM_CONFIGURATION.md)
-- Be descriptive (not just "guide.md")
-
-**Formatting**:
-- Use Markdown
-- Include table of contents for long docs
-- Use code blocks with language hints
-- Add last updated date
-- Include examples
-
-**Structure**:
-- Start with overview
-- Use clear headings (##, ###)
-- Add cross-references to related docs
-- Include troubleshooting section
-- End with change log (for living docs)
-
-### Updating Documentation
-
-**When to update**:
-- System configuration changes
-- New features added
-- Training procedure modified
-- Bugs fixed (add to troubleshooting)
-- Performance improvements
-
-**How to update**:
-1. Edit relevant .md file
-2. Update "Last Updated" date
-3. Add to change log (if applicable)
-4. Update cross-references
-5. Test all commands/code examples
-
----
-
-## Document Status
-
-| Document | Status | Last Updated | Completeness |
-|----------|--------|--------------|--------------|
-| docs/README.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/SYSTEM_CONFIGURATION.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/DATASET_DOCUMENTATION.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/QUICK_REFERENCE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/COMMON_ISSUES.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/TRAINING_GUIDE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/PARALLEL_TRAINING_GUIDE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/INFERENCE_GUIDE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/MODEL_COMPARISON_GUIDE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/BUILD_RTX5090_DOCKER.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/RTX_5090_PYTORCH_UPGRADE.md | ✅ Complete | 2025-12-01 | 100% |
-| docs/PYTORCH_2.10_COMPATIBILITY_FIXES.md | ✅ Complete | 2025-12-01 | 100% |
-| CLAUDE.md | ✅ Complete | 2025-12-01 | 100% |
-
----
-
-## Feedback
-
-Found an error? Have suggestions?
-- Open an issue on GitHub
-- Submit a pull request
-- Contact the project maintainers
-
----
-
-**Happy Training!** 🚀
-
-For quick command lookups, keep [QUICK_REFERENCE.md](QUICK_REFERENCE.md) open during training.
+## Disclaimer
+The content provided above is for academic purposes only and is intended to demonstrate technical capabilities. Some examples are sourced from the internet. If any content infringes on your rights, please contact us to request its removal.

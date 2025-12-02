@@ -35,6 +35,14 @@ from deepspeed.runtime.zero.stage_1_and_2 import estimate_zero2_model_states_mem
 from cosyvoice.dataset.dataset import Dataset
 from cosyvoice.utils.scheduler import WarmupLR, NoamHoldAnnealing, ConstantLR
 
+# W&B integration
+try:
+    import wandb
+    WANDB_AVAILABLE = True
+except ImportError:
+    WANDB_AVAILABLE = False
+    logging.warning("W&B not installed. Install with: pip install wandb")
+
 
 def init_distributed(args):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
@@ -192,6 +200,81 @@ def init_summarywriter(args):
     return writer
 
 
+def init_wandb(args, configs):
+    """Initialize Weights & Biases tracking"""
+    rank = int(os.environ.get('RANK', 0))
+
+    # Only initialize on rank 0 to avoid duplicate runs
+    if rank != 0:
+        return None
+
+    if not WANDB_AVAILABLE:
+        logging.warning("W&B not available, skipping W&B initialization")
+        return None
+
+    # Check if W&B settings exist in config
+    train_conf = configs.get('train_conf', {})
+    wandb_project = train_conf.get('wandb_project')
+    wandb_entity = train_conf.get('wandb_entity')
+    wandb_api_key = train_conf.get('wandb_api_key')
+    wandb_run_name = train_conf.get('wandb_run_name')
+
+    # Also check environment variables (can override config)
+    if not wandb_api_key:
+        wandb_api_key = os.environ.get('WANDB_API_KEY')
+    if not wandb_project:
+        wandb_project = os.environ.get('WANDB_PROJECT')
+    if not wandb_run_name:
+        wandb_run_name = os.environ.get('WANDB_RUN_NAME')
+
+    # Skip if no project configured
+    if not wandb_project:
+        logging.info("W&B project not configured, skipping W&B tracking")
+        return None
+
+    # Set API key if provided
+    if wandb_api_key:
+        os.environ['WANDB_API_KEY'] = wandb_api_key
+
+    # Parse project (handle format: "entity/project" or just "project")
+    if '/' in wandb_project:
+        entity, project = wandb_project.split('/', 1)
+        if not wandb_entity:
+            wandb_entity = entity
+    else:
+        project = wandb_project
+
+    # Generate run name if not provided
+    if not wandb_run_name:
+        model_name = getattr(args, 'model', 'unknown')
+        timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        wandb_run_name = f"emotional-sft-{model_name}-{timestamp}"
+
+    try:
+        # Initialize W&B
+        wandb.init(
+            project=project,
+            entity=wandb_entity,
+            name=wandb_run_name,
+            config={
+                'model': getattr(args, 'model', 'unknown'),
+                'train_engine': args.train_engine,
+                'train_data': args.train_data,
+                'cv_data': args.cv_data,
+                'model_dir': args.model_dir,
+                **train_conf  # Include all training config
+            },
+            dir=os.environ.get('WANDB_DIR', './wandb_logs'),
+            resume='allow'
+        )
+        logging.info(f"W&B initialized: project={project}, entity={wandb_entity}, run={wandb_run_name}")
+        logging.info(f"W&B dashboard: {wandb.run.url}")
+        return wandb
+    except Exception as e:
+        logging.warning(f"Failed to initialize W&B: {e}")
+        return None
+
+
 def save_model(model, model_name, info_dict):
     rank = int(os.environ.get('RANK', 0))
     model_dir = info_dict["model_dir"]
@@ -342,6 +425,18 @@ def log_per_step(writer, info_dict):
             for k, v in loss_dict.items():
                 writer.add_scalar('{}/{}'.format(tag, k), v, step + 1)
 
+            # Log to W&B if available
+            if WANDB_AVAILABLE and wandb.run is not None and rank == 0:
+                wandb_log = {
+                    f'{tag}/epoch': info_dict['epoch'],
+                    f'{tag}/lr': info_dict['lr'],
+                    f'{tag}/grad_norm': info_dict['grad_norm'],
+                    'global_step': step + 1
+                }
+                for k, v in loss_dict.items():
+                    wandb_log[f'{tag}/{k}'] = v
+                wandb.log(wandb_log, step=step + 1)
+
     # TRAIN & CV, Shell log (stdout)
     if (info_dict['batch_idx'] + 1) % info_dict['log_interval'] == 0:
         log_str = '{} Batch {}/{} '.format(tag, epoch, batch_idx + 1)
@@ -370,3 +465,14 @@ def log_per_save(writer, info_dict):
             writer.add_scalar('{}/{}'.format(tag, k), info_dict[k], step + 1)
         for k, v in loss_dict.items():
             writer.add_scalar('{}/{}'.format(tag, k), v, step + 1)
+
+        # Log to W&B if available (validation metrics at checkpoint)
+        if WANDB_AVAILABLE and wandb.run is not None and rank == 0:
+            wandb_log = {
+                f'{tag}/epoch': epoch,
+                f'{tag}/lr': lr,
+                'global_step': step + 1
+            }
+            for k, v in loss_dict.items():
+                wandb_log[f'{tag}/{k}'] = v
+            wandb.log(wandb_log, step=step + 1)
