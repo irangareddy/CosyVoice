@@ -64,16 +64,17 @@ def init_dataset_and_dataloader(args, configs, gan, dpo):
     cv_dataset = Dataset(args.cv_data, data_pipeline=data_pipeline, mode='train', gan=gan, dpo=dpo, shuffle=False, partition=False)
 
     # do not use persistent_workers=True, as whisper tokenizer opens tiktoken file each time when the for loop starts
-    train_data_loader = DataLoader(train_dataset,
-                                   batch_size=None,
-                                   pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   prefetch_factor=args.prefetch)
-    cv_data_loader = DataLoader(cv_dataset,
-                                batch_size=None,
-                                pin_memory=args.pin_memory,
-                                num_workers=args.num_workers,
-                                prefetch_factor=args.prefetch)
+    # prefetch_factor can only be used when num_workers > 0
+    dataloader_kwargs = {
+        'batch_size': None,
+        'pin_memory': args.pin_memory,
+        'num_workers': args.num_workers,
+    }
+    if args.num_workers > 0:
+        dataloader_kwargs['prefetch_factor'] = args.prefetch
+
+    train_data_loader = DataLoader(train_dataset, **dataloader_kwargs)
+    cv_data_loader = DataLoader(cv_dataset, **dataloader_kwargs)
     return train_dataset, cv_dataset, train_data_loader, cv_data_loader
 
 

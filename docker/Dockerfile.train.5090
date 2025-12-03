@@ -82,6 +82,10 @@ RUN grep -v '^torch==' /workspace/CosyVoice/requirements.txt | \
     conda run -n cosyvoice pip install --no-cache-dir -r /tmp/filtered_requirements.txt || \
     (echo "ERROR: Failed to install requirements!" && exit 1)
 
+# Install wandb for experiment tracking
+RUN conda run -n cosyvoice pip install --no-cache-dir wandb || \
+    (echo "WARNING: Failed to install wandb, continuing...")
+
 # Verify critical packages
 RUN conda run -n cosyvoice python -c "import torch; import torchaudio; import onnxruntime; print('All dependencies installed successfully')"
 

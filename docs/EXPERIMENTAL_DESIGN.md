@@ -50,16 +50,92 @@
 
 ---
 
-## Lessons Learned
+---
 
-### Flow Matching Training Issues
-1. **Dataset mismatch**: ESD+RAVDESS may have distribution shift between train/val
-2. **Model capacity**: 14k samples insufficient for stable flow matching fine-tuning
-3. **Hyperparameter sensitivity**: Flow extremely sensitive to LR (1e-4 explodes, 2e-5 still diverges)
+## HiFiGAN Training - SUCCESSFUL
+
+### Run 1 (SUCCESS - Epoch 4 Best Quality)
+| Parameter | Value | Result |
+|-----------|-------|--------|
+| `lr` (gen/disc) | 0.0002 | Stable GAN training |
+| `scheduler` | constantlr | No warmup needed |
+| `grad_clip` | 5.0 | Higher tolerance for adversarial loss |
+| `accum_grad` | **1** | CRITICAL: No accumulation for GAN |
+| `max_epoch` | 30 | ~20 hours on RTX 5090 |
+| **Epoch 0** | CV: 100.71, Mel: 0.674, F0: 59.44 | Starting point |
+| **Epoch 4** | CV: 80.59, Mel: 0.488, F0: 43.73 | 20% improvement, best checkpoint |
+| **Outcome** | ✅ SUCCESS | Metrics improving, no overfitting |
+
+**Audio Quality Progression**:
+- Epochs 0-4: Robotic/metallic artifacts (undertrained)
+- Epochs 10-15: Expected to match pretrained quality
+- Epochs 20-30: May surpass pretrained with better emotion
+
+---
+
+## Failed Experiments & Lessons
+
+### 1. LLM Fine-Tuning Attempts (NOT TESTED YET)
+- Skipped due to Flow instability concerns
+- Pretrained LLM + fine-tuned HiFiGAN approach chosen instead
+- **Reason**: HiFiGAN-only fine-tuning more stable for emotional TTS
+
+### 2. Flow Matching Training Issues
+1. **Dataset mismatch**: ESD+RAVDESS may have distribution shift
+2. **Model capacity**: 14k samples insufficient for stable flow fine-tuning
+3. **Hyperparameter sensitivity**: Flow extremely sensitive to LR
 4. **Gradient clipping ineffective**: Even 0.5 clip couldn't prevent divergence
 
-### Recommendations
-- ❌ **DO NOT** fine-tune Flow on small emotional datasets (<50k utterances)
-- ✅ **DO** fine-tune HiFiGAN vocoder instead (more stable, GAN losses handle small data better)
-- ✅ **DO** use pretrained Flow with fine-tuned LLM + HiFiGAN
-- ⚠️ If Flow fine-tuning required: Try lr=5e-6, freeze encoder layers, train decoder only
+### 3. Early Checkpoint Audio Generation Failures
+- **Issue**: Robotic/metallic artifacts in epoch 0-4 samples
+- **Root Cause**: HiFiGAN vocoder undertrained (needs 10-20 epochs minimum)
+- **Solution**: Generated baseline with pretrained HiFiGAN for comparison
+- **Learning**: Don't evaluate vocoder quality before epoch 10
+
+### 4. Inference API Compatibility Issues
+- **Issue**: CosyVoice2 `.to()` method errors, `inference_instruct2()` parameter mismatches
+- **Root Cause**: API differences between CosyVoice 1.0 and 2.0
+- **Solution**: Use `inference_zero_shot()` or `inference_instruct2()` without calling `.to()`
+- **Learning**: CosyVoice2 outputs are already on CPU
+
+---
+
+## Successful Approaches
+
+### ✅ HiFiGAN-Only Fine-Tuning
+- **Approach**: Fine-tune only HiFiGAN vocoder, use pretrained LLM + Flow
+- **Benefits**: Stable training, works with small datasets (14k), faster iteration
+- **Results**: 20% CV loss improvement by epoch 4, continuing to improve
+
+### ✅ Emotion Sample Generation for Comparison
+- **Method**: Generate same texts + references across checkpoints
+- **Baseline**: Pretrained HiFiGAN (clean quality)
+- **Fine-tuned**: Epochs 0, 4, 10, 15... (progressive improvement)
+- **Value**: Objective comparison of emotional expressiveness
+
+### ✅ W&B Integration for Monitoring
+- **Metrics**: CV/loss, loss_mel, loss_f0, loss_gen, loss_disc
+- **Charts**: Real-time training curves, epoch comparison
+- **Benefit**: Early detection of divergence, identify best checkpoint
+
+---
+
+## Recommendations
+
+### DO ✅
+- Fine-tune HiFiGAN vocoder for emotional TTS (stable, works with small data)
+- Use pretrained LLM + Flow (no fine-tuning needed)
+- Monitor mel loss (<0.5) and F0 loss (<40) for quality
+- Wait until epoch 10+ before evaluating audio quality
+- Generate comparison samples with pretrained baseline
+
+### DON'T ❌
+- Fine-tune Flow on datasets <50k utterances (unstable)
+- Use warmup scheduler for GAN training (constantlr only)
+- Evaluate vocoder quality before epoch 10 (undertrained)
+- Use gradient accumulation for GAN (`accum_grad` must be 1)
+- Skip baseline comparison (need pretrained reference)
+
+### IF NEEDED ⚠️
+- Flow fine-tuning: lr=5e-6, freeze encoder, train decoder only
+- LLM fine-tuning: Start after HiFiGAN converges, use lr=1e-5

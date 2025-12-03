@@ -78,8 +78,7 @@ torchrun --nnodes=1 --nproc_per_node=1 \
   --model_dir exp/emotional_hifigan \
   --tensorboard_dir tensorboard/emotional_hifigan \
   --qwen_pretrain_path /workspace/pretrained_models/CosyVoice2-0.5B/CosyVoice-BlankEN \
-  --num_workers 2 \
-  --prefetch 50 \
+  --num_workers 0 \
   --use_amp
 
 echo ""
